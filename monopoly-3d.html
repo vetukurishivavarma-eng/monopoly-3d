@@ -763,8 +763,10 @@ function handleJailRoll(cp,isDoubles,total){
 }
 
 function buyProp(player,space){
-  if(player.money<space.price){toast('Not enough!','error');startAuction(space);return;}
-  player.money-=space.price;S.propertyOwners[space.idx]=player.id;player.properties.push(space.idx);
+  if(!player||!space)return;
+  const p=getP(player.id||player);if(!p)return;
+  if(p.money<space.price){toast('Not enough!','error');startAuction(space);return;}
+  p.money-=space.price;S.propertyOwners[space.idx]=p.id;p.properties.push(space.idx);
   toast(`🏠 Bought ${space.name}!`);closeModal();updateUI();renderPlayerPanels();
   broadcastGameAction('buy',{propertyIdx:space.idx});
 }
@@ -813,6 +815,30 @@ function tryLiquidate(p){
   }
   for(const pi of[...p.properties]){if(!S.propertyMortgaged[pi]&&S.propertyHouses[pi]===0){S.propertyMortgaged[pi]=true;p.money+=PROPERTIES[pi].mortgage;if(p.money>=0)return true;}}
   return p.money>=0;
+}
+
+function handleDisconnectedPlayer(discId){
+  const p=getP(discId);if(!p||p.bankrupt)return;
+  // Check host before marking bankrupt
+  if(p.id===S.hostId&&S.isHost){
+    const next=S.players.find(x=>!x.bankrupt&&x.id!==discId);
+    if(next){S.hostId=next.id;S.isHost=false;toast(`New host: ${next.name}`);}
+  }
+  p.bankrupt=true;p.connected=false;
+  toast(`⚡ ${p.name} disconnected and bankrupt!`,'error');
+  for(let i=0;i<40;i++){if(S.propertyOwners[i]===p.id){S.propertyOwners[i]=null;S.propertyHouses[i]=0;S.propertyMortgaged[i]=false;}}
+  p.properties=[];
+  const cp=getCP();
+  if(cp&&cp.id===discId){
+    S.rolled=false;S.modalOpen=false;closeModal();
+    let ni=S.currentPlayerIndex,att=0;
+    do{ni=(ni+1)%S.players.length;att++;}while(S.players[ni].bankrupt&&att<=S.players.length);
+    S.currentPlayerIndex=ni;
+    toast(`Skipping disconnected ${p.name}'s turn`);
+  }
+  const act=S.players.filter(x=>!x.bankrupt);
+  if(act.length<=1)endGame(act[0]);
+  else updateUI();renderPlayerPanels();broadcastGameAction('bankruptcy',{playerId:discId});
 }
 
 function handleBankruptcy(p){
@@ -930,7 +956,12 @@ function handleMsg(msg){
     case'player_joined':S.players=msg.players||S.players;updatePlayerList(msg.players);toast(`${msg.player.name} joined`);break;
     case'player_left':S.players=msg.players||S.players;updatePlayerList(msg.players);break;
     case'new_host':S.hostId=msg.hostId;if(msg.hostId===S.playerId){S.isHost=true;document.getElementById('startBtn').classList.remove('hidden');toast('You are now host');}break;
-    case'player_disconnected':updatePlayerList(msg.players);toast('Player disconnected','error');break;
+    case'player_disconnected':
+      updatePlayerList(msg.players);toast('Player disconnected','error');
+      if(S.gameStarted&&msg.playerId){
+        handleDisconnectedPlayer(msg.playerId);
+      }
+      break;
     case'game_started':startGameFromServer(msg.gameState);break;
     case'game_action':applyRemoteAction(msg);handleActionUI(msg);break;
     case'error':toast(msg.message,'error');break;
@@ -1062,7 +1093,15 @@ window.closeModal=closeModal;
 
 function showBuyModal(space){
   const p=getCP();if(!p)return;
-  showModal('🏠 Property',`<p style="text-align:center;font-size:1.2rem;font-weight:700;margin-bottom:4px;">${space.name}</p><p style="text-align:center;font-size:1.5rem;font-weight:800;color:#ffd700;margin-bottom:8px;">$${space.price}</p><div class="info-row"><span class="label">Your Balance</span><span class="value" style="color:${p.money>=space.price?'#4caf50':'#ff6b6b'};">$${p.money}</span></div><div class="info-row"><span class="label">Rent</span><span class="value">$${space.rent||0}</span></div><div class="actions"><button class="btn btn-primary" onclick="buyProp(getCP(),PROPERTIES[${space.idx}])" ${p.money>=space.price?'':'disabled'}>Buy</button><button class="btn btn-secondary" onclick="startAuction(PROPERTIES[${space.idx}])">Auction</button><button class="btn btn-secondary" onclick="closeModal();endTurn();">Skip</button></div>`);
+  showModal('🏠 Property',`<p style="text-align:center;font-size:1.2rem;font-weight:700;margin-bottom:4px;">${space.name}</p><p style="text-align:center;font-size:1.5rem;font-weight:800;color:#ffd700;margin-bottom:8px;">$${space.price}</p><div class="info-row"><span class="label">Your Balance</span><span class="value" style="color:${p.money>=space.price?'#4caf50':'#ff6b6b'};">$${p.money}</span></div><div class="info-row"><span class="label">Rent</span><span class="value">$${space.rent||0}</span></div><div class="actions"><button id="buyBtn" class="btn btn-primary" ${p.money>=space.price?'':'disabled'}>Buy</button><button class="btn btn-secondary" onclick="startAuction(PROPERTIES[${space.idx}])">Auction</button><button class="btn btn-secondary" onclick="closeModal();endTurn();">Skip</button></div>`);
+  document.getElementById('buyBtn').addEventListener('click',function buyClick(){
+    const cp=getCP();const s=PROPERTIES[${space.idx}];
+    if(!cp||!s)return;
+    if(cp.money<s.price){toast('Not enough!','error');startAuction(s);return;}
+    cp.money-=s.price;S.propertyOwners[s.idx]=cp.id;cp.properties.push(s.idx);
+    toast(`🏠 Bought ${s.name}!`);closeModal();updateUI();renderPlayerPanels();
+    broadcastGameAction('buy',{propertyIdx:s.idx});
+  });
 }
 
 function showCardModal(card,type,player){
