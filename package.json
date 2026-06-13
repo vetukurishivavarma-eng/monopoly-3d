@@ -1,0 +1,13 @@
+{
+  "name": "monopoly-online",
+  "version": "1.0.0",
+  "description": "Multiplayer Monopoly board game with private rooms",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  }
+}
