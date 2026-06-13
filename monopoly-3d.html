@@ -757,8 +757,8 @@ const dieFaces=[
 function loadCannonES(){
   return new Promise((resolve)=>{
     const script=document.createElement('script');
-    // Use unpkg instead of cdnjs - cannon-es is not on cdnjs
-    script.src='https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js';
+    // Use original cannon.js (UMD build) - cannon-es is ESM only
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js';
     let resolved=false;
     const done=()=>{if(resolved)return;resolved=true;
       if(typeof CANNON==='undefined'){resolve();return;}
