@@ -787,6 +787,8 @@ function createDice(){
   diceSceneGroup=new THREE.Group();
   scene.add(diceSceneGroup);
 
+  if(typeof CANNON==='undefined')return; // Physics unavailable, skip dice
+
   const mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.2,metalness:0.1});
   const size=0.35;
 
@@ -810,6 +812,7 @@ function createDice(){
 
 function rollDice3D(d1,d2,onComplete){
   if(animatingDice)return;
+  if(diceBodies.length===0){animatingDice=false;if(onComplete)onComplete();return;} // No physics dice
   animatingDice=true;
 
   diceMeshes.forEach((m,i)=>{
