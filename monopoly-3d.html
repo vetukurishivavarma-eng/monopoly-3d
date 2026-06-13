@@ -190,20 +190,25 @@ function init3D(){
   controls=new THREE.OrbitControls(camera,renderer.domElement);
   controls.target.set(0,0.5,0);controls.enableDamping=true;controls.dampingFactor=0.1;
   controls.minDistance=6;controls.maxDistance=30;controls.maxPolarAngle=Math.PI/2.2;controls.update();
-  const amb=new THREE.AmbientLight(0x404060,0.4);scene.add(amb);
-  const dir=new THREE.DirectionalLight(0xffeedd,1.2);
-  dir.position.set(10,18,8);dir.castShadow=true;
-  dir.shadow.mapSize.width=1024;dir.shadow.mapSize.height=1024;
-  const d=20;dir.shadow.camera.left=-d;dir.shadow.camera.right=d;
+  const amb=new THREE.AmbientLight(0x4466aa,0.3);scene.add(amb);
+  const dir=new THREE.DirectionalLight(0xffeedd,1.5);
+  dir.position.set(8,20,6);dir.castShadow=true;
+  dir.shadow.mapSize.width=2048;dir.shadow.mapSize.height=2048;
+  const d=15;dir.shadow.camera.left=-d;dir.shadow.camera.right=d;
   dir.shadow.camera.top=d;dir.shadow.camera.bottom=-d;
-  dir.shadow.camera.near=1;dir.shadow.camera.far=30;scene.add(dir);
-  const hem=new THREE.HemisphereLight(0x87ceeb,0x1a5c2a,0.4);scene.add(hem);
-  const rim=new THREE.DirectionalLight(0x4488ff,0.3);
-  rim.position.set(-8,4,-10);scene.add(rim);
-  const groundGeo=new THREE.PlaneGeometry(60,60);
-  const groundMat=new THREE.MeshStandardMaterial({color:0x0d3b1a,roughness:0.8});
+  dir.shadow.camera.near=1;dir.shadow.camera.far=35;scene.add(dir);
+  const hem=new THREE.HemisphereLight(0x87ceeb,0x3d7a3e,0.5);scene.add(hem);
+  const fill=new THREE.DirectionalLight(0x8888ff,0.25);fill.position.set(-6,8,-8);scene.add(fill);
+  // Ring lights around board
+  const ring=new THREE.DirectionalLight(0xff8844,0.15);ring.position.set(0,15,0);scene.add(ring);
+  const groundGeo=new THREE.PlaneGeometry(50,50);
+  const groundMat=new THREE.MeshStandardMaterial({color:0x0d4a1a,roughness:0.9});
   const ground=new THREE.Mesh(groundGeo,groundMat);
   ground.rotation.x=-Math.PI/2;ground.position.y=-0.5;ground.receiveShadow=true;scene.add(ground);
+  // Decorative path around board
+  const pathMat=new THREE.MeshStandardMaterial({color:0x1a6b2a,roughness:0.7});
+  const path=new THREE.Mesh(new THREE.RingGeometry(5.8,6.5,64),pathMat);
+  path.rotation.x=-Math.PI/2;path.position.y=-0.48;path.receiveShadow=true;scene.add(path);
   window.addEventListener('resize',()=>{
     camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth,window.innerHeight);
@@ -217,9 +222,17 @@ function init3D(){
 // ============ BOARD ============
 function buildBoard(){
   boardGroup=new THREE.Group();scene.add(boardGroup);
-  const baseMat=new THREE.MeshStandardMaterial({color:0xe8f5e9,roughness:0.6});
-  const base=new THREE.Mesh(new THREE.BoxGeometry(11,0.3,11),baseMat);
-  base.position.y=-0.15;base.receiveShadow=true;boardGroup.add(base);
+  const baseMat=new THREE.MeshStandardMaterial({color:0x1a3a2a,roughness:0.5,metalness:0.1});
+  const base=new THREE.Mesh(new THREE.BoxGeometry(10.8,0.15,10.8),baseMat);
+  base.position.y=-0.075;base.receiveShadow=true;boardGroup.add(base);
+  // Board surface
+  const surfaceMat=new THREE.MeshStandardMaterial({color:0xeef5ee,roughness:0.4,metalness:0.02});
+  const surface=new THREE.Mesh(new THREE.BoxGeometry(10.6,0.1,10.6),surfaceMat);
+  surface.position.y=0.05;surface.receiveShadow=true;boardGroup.add(surface);
+  // Gold border trim
+  const trimMat=new THREE.MeshStandardMaterial({color:0xccaa44,roughness:0.3,metalness:0.6});
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(10.65,0.02,10.65),trimMat);
+  trim.position.y=0.12;boardGroup.add(trim);
 
   const cs=11/13,off=5.5-cs/2;
   const bottoms=[
@@ -295,21 +308,30 @@ function buildBoard(){
     houseModels[i]=[];
   }
 
-  // Center
-  const centerMat=new THREE.MeshStandardMaterial({color:0xc8e6c9,roughness:0.7});
-  const center=new THREE.Mesh(new THREE.BoxGeometry(7.5,0.05,7.5),centerMat);
-  center.position.set(0,0.03,0);center.receiveShadow=true;boardGroup.add(center);
+  // Center - rich green with gold accents
+  const centerMat=new THREE.MeshStandardMaterial({color:0x1a6b2a,roughness:0.6});
+  const center=new THREE.Mesh(new THREE.BoxGeometry(7,0.08,7),centerMat);
+  center.position.set(0,0.14,0);center.receiveShadow=true;boardGroup.add(center);
+  const centerInner=new THREE.Mesh(new THREE.BoxGeometry(6.5,0.03,6.5),new THREE.MeshStandardMaterial({color:0x2a8a3a,roughness:0.5}));
+  centerInner.position.set(0,0.18,0);boardGroup.add(centerInner);
 
-  const logo=makeTextSprite('MONOPOLY',0.7,true,0x1b5e20);
-  logo.position.set(0,0.2,0);boardGroup.add(logo);
+  const logo=makeTextSprite('MONOPOLY',0.8,true,0x1b5e20);
+  logo.position.set(0,0.35,0);boardGroup.add(logo);
 
-  const subLogo=makeTextSprite('3D Edition',0.35,false,0x4a4a4a);
-  subLogo.position.set(0,0.1,0);boardGroup.add(subLogo);
+  const subLogo=makeTextSprite('3D Edition',0.3,false,0x666666);
+  subLogo.position.set(0,0.2,0);boardGroup.add(subLogo);
 
-  addCornerLabel('GO',[-5.2,0.25,-5.2],'💰');
-  addCornerLabel('JAIL',[-5.2,0.25,5.2],'🔒');
-  addCornerLabel('FREE\\nPARK',[5.2,0.25,5.2],'🅿️');
-  addCornerLabel('GO TO\\nJAIL',[5.2,0.25,-5.2],'🚨');
+  // Decorative corner diamonds
+  const diaMat=new THREE.MeshStandardMaterial({color:0xccaa44,roughness:0.3,metalness:0.5});
+  [[-5.1,-5.1],[-5.1,5.1],[5.1,5.1],[5.1,-5.1]].forEach(([x,z])=>{
+    const dia=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.01,4),diaMat);
+    dia.rotation.y=Math.PI/4;dia.position.set(x,0.16,z);boardGroup.add(dia);
+  });
+
+  addCornerLabel('GO',[-5.1,0.3,-5.1],'💰');
+  addCornerLabel('JAIL',[-5.1,0.3,5.1],'🔒');
+  addCornerLabel('FREE\\nPARK',[5.1,0.3,5.1],'🅿️');
+  addCornerLabel('GO TO\\nJAIL',[5.1,0.3,-5.1],'🚨');
 }
 
 function addCornerLabel(text,xz,emoji){
@@ -429,6 +451,13 @@ function moveAvatarTo(avatar,toX,toZ,onCb){
   ud.targetPos={x:toX,z:toZ};ud.walking=true;ud.onWalkComplete=onCb;
 }
 
+function moveAvatarDirect(player,spaceIdx){
+  const avatar=avatarMeshes[player.id];
+  if(!avatar||!boardPositions[spaceIdx])return;
+  const pos=boardPositions[spaceIdx];
+  avatar.position.set(pos.x,0.3,pos.z);
+}
+
 function updateAvatarMovement(avatar,delta){
   if(!avatar||!avatar.userData||!avatar.userData.walking)return;
   const ud=avatar.userData,tp=ud.targetPos;if(!tp)return;
@@ -467,14 +496,40 @@ function loadCannonES(){
   });
 }
 
+function createDiceTexture(pips,color){
+  const s=128,c=document.createElement('canvas');c.width=s;c.height=s;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.roundRect(0,0,s,s,12);ctx.fill();
+  ctx.strokeStyle=color||'#333';ctx.lineWidth=2;ctx.roundRect(0,0,s,s,12);ctx.stroke();
+  ctx.fillStyle='#222';
+  const dot=(x,y)=>{ctx.beginPath();ctx.arc(x*s/6+(s/6),y*s/6+(s/6),s/18,0,Math.PI*2);ctx.fill();};
+  const dots={
+    1:[[2,2]],2:[[1,1],[3,3]],3:[[1,1],[2,2],[3,3]],
+    4:[[1,1],[1,3],[3,1],[3,3]],5:[[1,1],[1,3],[2,2],[3,1],[3,3]],
+    6:[[1,1],[1,2],[1,3],[3,1],[3,2],[3,3]]
+  };
+  (dots[pips]||[]).forEach(([x,y])=>dot(x,y));
+  return new THREE.CanvasTexture(c);
+}
+
 function createDice(){
   diceMeshes=[];diceBodies=[];
   diceSceneGroup=new THREE.Group();scene.add(diceSceneGroup);
   if(typeof CANNON==='undefined')return;
-  const mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.2,metalness:0.1});
-  const size=0.35,geo=new THREE.BoxGeometry(size,size,size);
+  const size=0.4,geo=new THREE.BoxGeometry(size,size,size);
+  const bevel=0.03;
   [-1,1].forEach((s,idx)=>{
-    const m=new THREE.Mesh(geo.clone(),mat.clone());
+    const materials=[];
+    // Front(0) +Z:1, Back(1) -Z:2, Up(2) +Y:3, Down(3) -Y:4, Right(4) +X:5, Left(5) -X:6
+    const facePips=[[1,0,1,0],[2,0,2,0],[3,0,3,0],[4,0,4,0],[5,0,5,0],[6,0,6,0]];
+    // Randomize which face corresponds to which number
+    const order=[1,2,3,4,5,6];for(let i=5;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+    order.forEach((pip,i)=>{
+      const tex=createDiceTexture(pip,'#444');
+      const mat=new THREE.MeshStandardMaterial({map:tex,roughness:0.3,metalness:0.05});
+      materials[i]=mat;
+    });
+    const m=new THREE.Mesh(geo.clone(),materials);
     m.castShadow=true;m.position.set(0,2+idx*0.8,0);m.visible=false;
     diceSceneGroup.add(m);diceMeshes.push(m);
     const b=new CANNON.Body({mass:0.5,shape:new CANNON.Box(new CANNON.Vec3(size/2,size/2,size/2))});
@@ -553,9 +608,20 @@ function createAvatarMeshes(){
   const colors=['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1'];
   S.players.forEach((p,idx)=>{
     const avatar=createAvatar(idx,colors[idx%6]);
-    const pos=boardPositions[0];
-    if(pos){avatar.position.set(pos.x,0,pos.z);}
+    const pos=boardPositions[p.position]||boardPositions[0];
+    if(pos){avatar.position.set(pos.x,0.3,pos.z);}
     scene.add(avatar);avatarMeshes[p.id]=avatar;
+  });
+}
+
+function syncAvatarPositions(){
+  S.players.forEach(p=>{
+    const avatar=avatarMeshes[p.id];
+    if(!avatar||!boardPositions[p.position])return;
+    const pos=boardPositions[p.position];
+    const dx=avatar.position.x-pos.x,dz=avatar.position.z-pos.z;
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    if(dist>0.1){avatar.position.set(pos.x,0.3,pos.z);}
   });
 }
 
@@ -665,19 +731,20 @@ function drawCard(player,type){
   showCardModal(card,type,player);
 }
 
-function executeCard(card,player){
+function executeCard(card,playerId){
   closeModal();
+  const player=getP(playerId);if(!player)return;
   switch(card.action){
     case'goto':
       if(card.value<player.position){player.money+=200;toast('🏁 Passed GO!');}
-      player.position=card.value;handleLanding(player);break;
+      player.position=card.value;moveAvatarDirect(player,card.value);handleLanding(player);break;
     case'collect':player.money+=card.value;toast(`💵 +$${card.value}`);break;
     case'pay':{const a=Math.min(card.value,player.money);player.money-=a;toast(`💸 -$${a}`);if(player.money<=0)handleDebt(player);break;}
     case'jailfree':S.jailFreeCards[player.id]=(S.jailFreeCards[player.id]||0)+1;toast('🎫 Got Jail Free card!');break;
     case'gotojail':goToJail(player);endTurn();break;
-    case'back3':player.position=(player.position-card.value+40)%40;handleLanding(player);break;
-    case'nearest_rr':{const rrs=[5,15,25,35];let n=rrs.find(r=>r>player.position);if(n===undefined)n=rrs[0];if(n<player.position)player.money+=200;player.position=n;handleLanding(player);break;}
-    case'nearest_utility':{const u=[12,28];let n=u.find(x=>x>player.position);if(n===undefined)n=u[0];if(n<player.position)player.money+=200;player.position=n;handleLanding(player);break;}
+    case'back3':player.position=(player.position-card.value+40)%40;moveAvatarDirect(player,player.position);handleLanding(player);break;
+    case'nearest_rr':{const rrs=[5,15,25,35];let n=rrs.find(r=>r>player.position);if(n===undefined)n=rrs[0];if(n<player.position)player.money+=200;player.position=n;moveAvatarDirect(player,n);handleLanding(player);break;}
+    case'nearest_utility':{const u=[12,28];let n=u.find(x=>x>player.position);if(n===undefined)n=u[0];if(n<player.position)player.money+=200;player.position=n;moveAvatarDirect(player,n);handleLanding(player);break;}
     case'repairs':{let t=0;for(const p of player.properties){const h=S.propertyHouses[p];t+=h===5?card.hotelValue:h*card.value;}t=Math.min(t,player.money);player.money-=t;toast(`🔧 Paid $${t} repairs`);if(player.money<=0)handleDebt(player);break;}
     case'pay_each':{let t=0;S.players.forEach(p=>{if(p.id!==player.id&&!p.bankrupt){const a=Math.min(card.value,player.money-t);player.money-=a;p.money+=a;t+=a;}});toast(`💸 Paid $${t}`);if(player.money<=0)handleDebt(player);break;}
     case'collect_each':S.players.forEach(p=>{if(p.id!==player.id&&!p.bankrupt){const a=Math.min(card.value,p.money);p.money-=a;player.money+=a;}});toast(`💰 Collected $${card.value} each`);break;
@@ -905,6 +972,7 @@ function applyRemoteAction(msg){
     S.jailTurns=msg.gameState.jailTurns;S.jailFreeCards=msg.gameState.jailFreeCards;
     S.currentPlayerIndex=msg.gameState.currentPlayerIndex;S.doublesCount=msg.gameState.doublesCount;
   }
+  syncAvatarPositions();
   updateUI();renderPlayerPanels();
 }
 
@@ -1000,9 +1068,8 @@ function showBuyModal(space){
 function showCardModal(card,type,player){
   const icon=type==='chance'?'❓':'📦';
   const title=type==='chance'?'CHANCE':'COMMUNITY CHEST';
-  showModal(title,`<div class="card-animation" style="text-align:center;padding:8px;"><div style="font-size:3rem;margin-bottom:8px;">${icon}</div><p style="font-size:1.05rem;font-weight:500;line-height:1.6;">${card.text}</p><div class="actions" style="justify-content:center;margin-top:16px;"><button class="btn btn-primary" onclick="executeCard(S._lastCard||window._lastCard,S._lastCardPlayer||window._lastCardPlayer)">OK</button></div></div>`);
-  window._lastCard=card;window._lastCardPlayer=player;
-  S._lastCard=card;S._lastCardPlayer=player;
+  showModal(title,`<div class="card-animation" style="text-align:center;padding:8px;"><div style="font-size:3rem;margin-bottom:8px;">${icon}</div><p style="font-size:1.05rem;font-weight:500;line-height:1.6;">${card.text}</p><div class="actions" style="justify-content:center;margin-top:16px;"><button class="btn btn-primary" onclick="executeCard(S._lastCard, S._lastCardPlayerId)">OK</button></div></div>`);
+  S._lastCard=card;S._lastCardPlayerId=player.id;
 }
 window.executeCard=executeCard;
 
