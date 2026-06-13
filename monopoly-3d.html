@@ -1200,8 +1200,10 @@ function startGameFromServer(gameState){
   S.gameStarted=true;
   S.localPlayerIndex=S.players.findIndex(p=>p.id===S.playerId);
   document.getElementById('lobbyScreen').classList.add('hidden');
+  document.getElementById('roomScreen').classList.add('hidden');
   document.getElementById('gameContainer').classList.remove('hidden');
-  initGame();
+  // Create avatars for this client without re-shuffling players
+  createAvatarMeshes();
   updateUI();
   renderPlayerPanels();
 }
