@@ -1196,9 +1196,11 @@ function updatePlayerList(players){
 }
 
 function startGameFromServer(gameState){
-  Object.assign(S,gameState);
+  console.log('startGameFromServer called', gameState ? 'has state' : 'NO STATE');
+  Object.assign(S,gameState||{});
   S.gameStarted=true;
   S.localPlayerIndex=S.players.findIndex(p=>p.id===S.playerId);
+  console.log('Players after assign:', S.players.length, 'currentIdx:', S.currentPlayerIndex, 'cp:', S.players[S.currentPlayerIndex]?.name);
   document.getElementById('lobbyScreen').classList.add('hidden');
   document.getElementById('roomScreen').classList.add('hidden');
   document.getElementById('gameContainer').classList.remove('hidden');
@@ -1342,13 +1344,16 @@ async function init(){
 
   document.getElementById('startBtn').addEventListener('click',()=>{
     if(!S.isHost)return;
+    console.log('Start clicked, players before init:', S.players.length);
     initGame();
+    console.log('After init, players:', S.players.length, 'cp:', getCP()?.name, 'turnInfo:', document.getElementById('turnInfo')?.innerHTML);
     send({type:'start_game',gameState:createSnapshot()});
     S.gameStarted=true;
     document.getElementById('lobbyScreen').classList.add('hidden');
     document.getElementById('roomScreen').classList.add('hidden');
     document.getElementById('gameContainer').classList.remove('hidden');
     updateUI();renderPlayerPanels();
+    console.log('After UI update, turnInfo:', document.getElementById('turnInfo')?.innerHTML);
   });
 
   document.getElementById('leaveBtn').addEventListener('click',()=>{
