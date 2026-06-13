@@ -1172,14 +1172,17 @@ function send(m){if(S.ws&&S.ws.readyState===WebSocket.OPEN)S.ws.send(JSON.string
 function handleMsg(msg){
   switch(msg.type){
     case'room_created':S.roomCode=msg.roomCode;S.playerId=msg.playerId;S.isHost=true;S.hostId=msg.playerId;
+      S.players=msg.players||[];
       document.getElementById('roomCodeTop').textContent=msg.roomCode;
       document.getElementById('roomCode').textContent=msg.roomCode;
       showScreen('room');updatePlayerList(msg.players);break;
     case'room_joined':S.roomCode=msg.roomCode;S.playerId=msg.playerId;S.isHost=false;S.hostId=msg.hostId;
+      S.players=msg.players||[];
       document.getElementById('roomCodeTop').textContent=msg.roomCode;
       document.getElementById('roomCode').textContent=msg.roomCode;
       showScreen('room');updatePlayerList(msg.players);break;
-    case'player_joined':updatePlayerList(msg.players);toast(`${msg.player.name} joined`);break;
+    case'player_joined':S.players=msg.players||S.players;updatePlayerList(msg.players);toast(`${msg.player.name} joined`);break;
+    case'player_left':S.players=msg.players||S.players;updatePlayerList(msg.players);break;
     case'player_left':updatePlayerList(msg.players);break;
     case'new_host':S.hostId=msg.hostId;if(msg.hostId===S.playerId){S.isHost=true;document.getElementById('startBtn').classList.remove('hidden');toast('You are now host');}break;
     case'player_disconnected':updatePlayerList(msg.players);toast('Player disconnected','error');break;
