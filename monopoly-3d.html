@@ -757,13 +757,15 @@ const dieFaces=[
 function loadCannonES(){
   return new Promise((resolve)=>{
     const script=document.createElement('script');
-    script.src='https://cdnjs.cloudflare.com/ajax/libs/cannon-es/0.20.0/cannon-es.js';
-    script.onload=()=>{
+    // Use unpkg instead of cdnjs - cannon-es is not on cdnjs
+    script.src='https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js';
+    let resolved=false;
+    const done=()=>{if(resolved)return;resolved=true;
+      if(typeof CANNON==='undefined'){resolve();return;}
       world=new CANNON.World();
       world.gravity.set(0,-15,0);
       world.broadphase=new CANNON.NaiveBroadphase();
       world.solver.iterations=10;
-      // Ground plane for dice to land on
       const groundBody=new CANNON.Body({mass:0});
       groundBody.addShape(new CANNON.Plane());
       groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0),-Math.PI/2);
@@ -771,7 +773,11 @@ function loadCannonES(){
       world.addBody(groundBody);
       resolve();
     };
+    script.onload=done;
+    script.onerror=done;
     document.head.appendChild(script);
+    // Timeout after 5s - game works without physics dice
+    setTimeout(done,5000);
   });
 }
 
