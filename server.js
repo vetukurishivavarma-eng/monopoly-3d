@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname)));
 
 // Serve the main game page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'monopoly.html'));
+  res.sendFile(path.join(__dirname, 'monopoly-3d.html'));
 });
 
 // Generate a random room code
@@ -337,6 +337,11 @@ function broadcastToRoomExcept(roomCode, message, excludePlayerId) {
     }
   }
 }
+
+// Health check for Render
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
 
 // Periodic cleanup of stale rooms (older than 24 hours)
 setInterval(() => {

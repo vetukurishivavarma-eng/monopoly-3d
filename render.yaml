@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: monopoly-3d
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 18

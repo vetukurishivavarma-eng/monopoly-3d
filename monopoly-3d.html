@@ -53,12 +53,42 @@ input{font-family:inherit;outline:none}
 .win-screen{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);animation:fadeIn 0.5s}
 .win-screen h1{font-family:'Playfair Display',serif;font-size:3rem;color:#ffd700;margin-bottom:8px}
 .win-screen .nm{font-size:1.3rem;color:#fff;margin-bottom:16px}
+/* Tablet */
+@media(max-width:1024px){
+  .player-strip{width:140px;font-size:0.85rem}
+  .player-strip .player-card{padding:6px}
+  .player-card .hdr .nm{font-size:0.7rem}
+  .player-card .hdr .cash{font-size:0.75rem}
+}
+/* Mobile */
 @media(max-width:768px){
-  .player-strip{width:100%;position:static;flex-direction:row;overflow-x:auto;padding:4px}
-  .player-strip .player-card{min-width:120px;flex-shrink:0}
-  .action-bar{gap:4px;padding:6px 8px}
-  .action-bar .btn{font-size:0.7rem;padding:5px 10px}
+  .player-strip{width:100%;position:static;flex-direction:row;overflow-x:auto;padding:4px;gap:4px}
+  .player-strip .player-card{min-width:110px;flex-shrink:0;padding:5px 7px}
+  .player-card .hdr .nm{font-size:0.65rem}
+  .player-card .hdr .cash{font-size:0.7rem}
+  .player-card .props{display:none}
+  .action-bar{gap:3px;padding:5px 6px}
+  .action-bar .btn{font-size:0.65rem;padding:5px 8px}
   .player-strip.right{display:none}
+  #topBar{padding:5px 10px}
+  #topBar .room{font-size:0.65rem}
+  #turnInfo{font-size:0.7rem}
+  .modal{padding:16px;width:92%;max-width:340px}
+  .modal h3{font-size:1rem}
+  .modal p{font-size:0.8rem}
+  .modal .actions .btn{font-size:0.7rem;padding:6px 10px;min-width:60px}
+  .toast{font-size:0.7rem;padding:6px 12px}
+  .btn{padding:6px 10px;font-size:0.7rem}
+}
+/* Small mobile */
+@media(max-width:420px){
+  .player-strip .player-card{min-width:80px;padding:4px 5px}
+  .player-card .hdr .nm{font-size:0.55rem}
+  .player-card .hdr .cash{font-size:0.6rem}
+  .action-bar .btn{font-size:0.6rem;padding:6px 8px;min-height:36px;min-width:36px}
+  .action-bar .btn-sm{padding:6px 8px}
+  #topBar{padding:3px 6px}
+  #turnInfo{font-size:0.6rem}
 }
 </style>
 </head>
@@ -222,10 +252,14 @@ function init3D(){
   scene.background=new THREE.Color(0x1a5c2a);
   scene.fog=new THREE.Fog(0x1a5c2a,30,50);
 
-  // Camera
+  // Camera - auto-adjust for mobile
   const asp=window.innerWidth/window.innerHeight;
   camera=new THREE.PerspectiveCamera(40,asp,0.1,100);
-  camera.position.set(16,14,16);
+  const isMobile=window.innerWidth<=768;
+  const isTablet=window.innerWidth<=1024&&window.innerWidth>768;
+  const dist=isMobile?22:(isTablet?18:16);
+  const height=isMobile?18:(isTablet?15:14);
+  camera.position.set(dist,height,dist);
   camera.lookAt(0,0,0);
 
   // Renderer
@@ -236,6 +270,7 @@ function init3D(){
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.2;
+  renderer.domElement.style.touchAction='none'; // Prevent browser touch interference
   document.body.prepend(renderer.domElement);
 
   // Controls
@@ -283,6 +318,15 @@ function init3D(){
     const a=window.innerWidth/window.innerHeight;
     camera.aspect=a; camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth,window.innerHeight);
+    // Re-position camera for orientation changes
+    const mob=window.innerWidth<=768;
+    const tab=window.innerWidth<=1024&&window.innerWidth>768;
+    const d=mob?22:(tab?18:16),h=mob?18:(tab?15:14);
+    camera.position.set(d,h,d);
+    controls.target.set(0,0.5,0);
+    controls.update();
+    // Re-layout player panels
+    renderPlayerPanels();
   });
 
   buildBoard();
@@ -1301,8 +1345,7 @@ async function init(){
     S.roomCode=null;showScreen('lobby');
   });
 
-  document.getElementById('rollBtn').addEventListener('click',rollDiceGame);
-  document.getElementById('roomCode').textContent=S.roomCode||'------';
+  document.getElementById('rollBtn').addEventListener('click',rollDiceGame);      document.getElementById('roomCode').textContent=S.roomCode||'------';
   document.getElementById('endTurnBtn').addEventListener('click',endTurn);
   document.getElementById('buildBtn').addEventListener('click',showBuildModal);
   document.getElementById('mortgageBtn').addEventListener('click',showMortgageModal);
@@ -1326,29 +1369,29 @@ document.addEventListener('DOMContentLoaded',init);
 <!-- ===== LOBBY HTML ===== -->
 <div id="lobbyScreen" class="screen" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b1a 0%,#1a5c2a 50%,#0d3b1a 100%);z-index:50">
   <div style="text-align:center;">
-    <h1 style="font-family:'Playfair Display',serif;font-size:3rem;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;">MONOPOLY</h1>
-    <p style="color:#8bc34a;font-size:0.9rem;margin-bottom:20px;">3D Online Edition</p>
-    <div id="lobbyCard" style="background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:24px;width:340px;margin:0 auto;">
-      <div style="margin-bottom:12px;">
-        <label style="font-size:0.75rem;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Your Name</label>
-        <input id="nameInput" type="text" placeholder="Enter name..." maxlength="20" style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:0.95rem;margin-top:4px;">
+    <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2rem,8vw,3rem);background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;">MONOPOLY</h1>
+    <p style="color:#8bc34a;font-size:clamp(0.7rem,2.5vw,0.9rem);margin-bottom:clamp(12px,4vw,20px);">3D Online Edition</p>
+    <div id="lobbyCard" style="background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:clamp(16px,4vw,24px);width:min(92vw,340px);margin:0 auto;">
+      <div style="margin-bottom:clamp(8px,2vw,12px);">
+        <label style="font-size:clamp(0.65rem,2vw,0.75rem);color:#aaa;text-transform:uppercase;letter-spacing:1px;">Your Name</label>
+        <input id="nameInput" type="text" placeholder="Enter name..." maxlength="20" style="width:100%;padding:clamp(8px,2.5vw,10px) clamp(10px,3vw,14px);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:clamp(0.8rem,2.5vw,0.95rem);margin-top:4px;">
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:0.75rem;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Your Token</label>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px;">
-          <div class="token-option selected" data-token="🚗" style="font-size:1.5rem;padding:8px;background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;transition:all 0.2s;">🚗</div>
-          <div class="token-option" data-token="🎩" style="font-size:1.5rem;padding:8px;background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🎩</div>
-          <div class="token-option" data-token="👞" style="font-size:1.5rem;padding:8px;background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">👞</div>
-          <div class="token-option" data-token="🐕" style="font-size:1.5rem;padding:8px;background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🐕</div>
-          <div class="token-option" data-token="🚢" style="font-size:1.5rem;padding:8px;background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🚢</div>
-          <div class="token-option" data-token="🛹" style="font-size:1.5rem;padding:8px;background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🛹</div>
+      <div style="margin-bottom:clamp(8px,2vw,12px);">
+        <label style="font-size:clamp(0.65rem,2vw,0.75rem);color:#aaa;text-transform:uppercase;letter-spacing:1px;">Your Token</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(4px,1.5vw,6px);margin-top:4px;">
+          <div class="token-option selected" data-token="🚗" style="font-size:clamp(1.2rem,4vw,1.5rem);padding:clamp(5px,2vw,8px);background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;transition:all 0.2s;">🚗</div>
+          <div class="token-option" data-token="🎩" style="font-size:clamp(1.2rem,4vw,1.5rem);padding:clamp(5px,2vw,8px);background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🎩</div>
+          <div class="token-option" data-token="👞" style="font-size:clamp(1.2rem,4vw,1.5rem);padding:clamp(5px,2vw,8px);background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">👞</div>
+          <div class="token-option" data-token="🐕" style="font-size:clamp(1.2rem,4vw,1.5rem);padding:clamp(5px,2vw,8px);background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🐕</div>
+          <div class="token-option" data-token="🚢" style="font-size:clamp(1.2rem,4vw,1.5rem);padding:clamp(5px,2vw,8px);background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🚢</div>
+          <div class="token-option" data-token="🛹" style="font-size:clamp(1.2rem,4vw,1.5rem);padding:clamp(5px,2vw,8px);background:rgba(255,255,255,0.06);border:2px solid transparent;border-radius:8px;text-align:center;cursor:pointer;">🛹</div>
         </div>
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:0.75rem;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Room Code</label>
-        <input id="codeInput" type="text" placeholder="Enter code to join..." maxlength="6" style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:0.95rem;text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-top:4px;">
+      <div style="margin-bottom:clamp(8px,2vw,12px);">
+        <label style="font-size:clamp(0.65rem,2vw,0.75rem);color:#aaa;text-transform:uppercase;letter-spacing:1px;">Room Code</label>
+        <input id="codeInput" type="text" placeholder="Enter code to join..." maxlength="6" style="width:100%;padding:clamp(8px,2.5vw,10px) clamp(10px,3vw,14px);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:clamp(0.8rem,2.5vw,0.95rem);text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-top:4px;">
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:clamp(4px,2vw,8px);">
         <button id="createBtn" class="btn btn-primary" style="flex:1;">Create Room</button>
         <button id="joinBtn" class="btn btn-secondary" style="flex:1;">Join Room</button>
       </div>
@@ -1358,13 +1401,13 @@ document.addEventListener('DOMContentLoaded',init);
 
 <!-- Room Lobby -->
 <div id="roomScreen" class="screen hidden" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b1a 0%,#1a5c2a 50%,#0d3b1a 100%);z-index:50">
-  <div style="text-align:center;">
-    <div style="background:rgba(255,255,255,0.05);border:2px dashed rgba(255,215,0,0.3);border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:0.75rem;color:#888;">Share this code</div>
-      <div id="roomCode" style="font-size:2.5rem;font-weight:800;letter-spacing:8px;color:#ffd700;font-family:'Playfair Display',serif;">------</div>
+  <div style="text-align:center;width:min(92vw,340px);">
+    <div style="background:rgba(255,255,255,0.05);border:2px dashed rgba(255,215,0,0.3);border-radius:12px;padding:clamp(10px,3vw,16px);margin-bottom:clamp(10px,3vw,16px);">
+      <div style="font-size:clamp(0.65rem,2vw,0.75rem);color:#888;">Share this code</div>
+      <div id="roomCode" style="font-size:clamp(1.8rem,6vw,2.5rem);font-weight:800;letter-spacing:clamp(4px,2vw,8px);color:#ffd700;font-family:'Playfair Display',serif;">------</div>
     </div>
-    <h3 style="font-size:1rem;font-weight:600;margin-bottom:10px;">Players</h3>
-    <div id="playerList" style="display:flex;flex-direction:column;gap:6px;width:300px;margin-bottom:16px;"></div>
+    <h3 style="font-size:clamp(0.85rem,2.5vw,1rem);font-weight:600;margin-bottom:clamp(6px,2vw,10px);">Players</h3>
+    <div id="playerList" style="display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:12px;"></div>
     <button id="startBtn" class="btn btn-primary" style="width:100%;">Start Game</button>
     <button id="leaveBtn" class="btn btn-danger" style="width:100%;margin-top:6px;">Leave Room</button>
   </div>
