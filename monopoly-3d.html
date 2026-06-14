@@ -194,7 +194,8 @@ const S={
   propertyMortgaged:new Array(40).fill(false),
   chanceDeck:[],communityDeck:[],
   jailTurns:{},jailFreeCards:{},
-  modalOpen:false
+  modalOpen:false,
+  _rolledThisTurn:false
 };
 function getP(id){return S.players.find(p=>p.id===id)}
 function getCP(){return S.players[S.currentPlayerIndex]}
@@ -223,6 +224,7 @@ let currentLookAt={x:0,y:2,z:0};
 let playerNameplates={};
 let activePlayerGlow=null,activePlayerArrow=null;
 let overviewMode=true;
+let rendererReady=false;
 
 function getBoardLayout(){
   const corners=[{idx:0,x:9.5,z:-9.5,w:3,d:3},{idx:10,x:-9.5,z:-9.5,w:3,d:3},{idx:20,x:-9.5,z:9.5,w:3,d:3},{idx:30,x:9.5,z:9.5,w:3,d:3}];
@@ -278,24 +280,24 @@ function createDieTexture(pips){
   const tex=new THREE.CanvasTexture(c);tex.needsUpdate=true;return tex;
 }
 function createTileTexture(prop,isCorner){
-  const W=256,H=256;const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
+  const W=512,H=512;const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
   let base='#FFF8E1';switch(prop.type){case'go':base='#FFF8E1';break;case'jail':base='#9E9E9E';break;case'freeparking':base='#F9A825';break;case'gotojail':base='#B71C1C';break;case'tax':base='#C62828';break;case'chance':base='#FF6F00';break;case'community':base='#1565C0';break;case'property':base='#FFF8E1';break;case'railroad':base='#37474F';break;case'utility':base='#B0BEC5';break;}
-  ctx.fillStyle=base;ctx.fillRect(0,0,W,H);ctx.strokeStyle='#000000';ctx.lineWidth=6;ctx.strokeRect(3,3,W-6,H-6);
-  if(prop.type==='property'&&prop.group&&GROUP_COLORS[prop.group]){ctx.fillStyle='#'+GROUP_COLORS[prop.group].toString(16).padStart(6,'0');ctx.fillRect(3,3,W-6,60);}
-  if(prop.type==='railroad'){ctx.fillStyle='#37474F';ctx.fillRect(3,3,W-6,60);}if(prop.type==='utility'){ctx.fillStyle='#78909C';ctx.fillRect(3,3,W-6,60);}
+  ctx.fillStyle=base;ctx.fillRect(0,0,W,H);ctx.strokeStyle='#000000';ctx.lineWidth=8;ctx.strokeRect(4,4,W-8,H-8);
+  if(prop.type==='property'&&prop.group&&GROUP_COLORS[prop.group]){ctx.fillStyle='#'+GROUP_COLORS[prop.group].toString(16).padStart(6,'0');ctx.fillRect(4,4,W-8,80);}
+  if(prop.type==='railroad'){ctx.fillStyle='#37474F';ctx.fillRect(4,4,W-8,80);}if(prop.type==='utility'){ctx.fillStyle='#78909C';ctx.fillRect(4,4,W-8,80);}
   ctx.fillStyle='#000000';ctx.textAlign='center';
   if(isCorner){
-    if(prop.type==='go'){ctx.fillStyle='#4CAF50';ctx.fillRect(3,3,W-6,50);ctx.fillStyle='#fff';ctx.font='bold 52px Arial';ctx.fillText('GO',W/2,38);ctx.fillStyle='#D32F2F';ctx.font='bold 36px Arial';ctx.fillText('→',W-50,H-70);ctx.fillStyle='#333';ctx.font='16px Arial';ctx.fillText('Collect $200',W/2,H-30);ctx.fillStyle='#888';ctx.font='12px Arial';ctx.fillText('as you pass',W/2,H-14);}
-    else if(prop.type==='jail'){ctx.fillStyle='#333';ctx.lineWidth=3;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(i*45+25,25);ctx.lineTo(i*45+25,200);ctx.stroke();}for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(10,i*35+25);ctx.lineTo(240,i*35+25);ctx.stroke();}ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='bold 32px Arial';ctx.fillText('JAIL',W/2,30);ctx.fillStyle='rgba(0,0,0,0.7)';ctx.font='16px Arial';ctx.fillText('Just Visiting',W/2,230);}
-    else if(prop.type==='freeparking'){ctx.fillStyle='#F9A825';ctx.fillRect(3,3,W-6,H-6);ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.strokeRect(6,6,W-12,H-12);ctx.fillStyle='#333';ctx.font='bold 44px Arial';ctx.fillText('FREE',W/2,70);ctx.font='bold 44px Arial';ctx.fillText('PARKING',W/2,125);ctx.font='28px Arial';ctx.fillText('Ⓟ',W/2,180);}
-    else if(prop.type==='gotojail'){ctx.fillStyle='#B71C1C';ctx.fillRect(3,3,W-6,H-6);ctx.fillStyle='#fff';ctx.font='bold 36px Arial';ctx.fillText('GO TO',W/2,55);ctx.font='bold 36px Arial';ctx.fillText('JAIL',W/2,100);ctx.font='28px Arial';ctx.fillText('🔒',W/2,150);}
+    if(prop.type==='go'){ctx.fillStyle='#4CAF50';ctx.fillRect(4,4,W-8,70);ctx.fillStyle='#fff';ctx.font='bold 80px Arial';ctx.fillText('GO',W/2,55);ctx.fillStyle='#D32F2F';ctx.font='bold 60px Arial';ctx.fillText('→',W-80,H-100);ctx.fillStyle='#333';ctx.font='24px Arial';ctx.fillText('Collect $200',W/2,H-50);ctx.fillStyle='#888';ctx.font='18px Arial';ctx.fillText('as you pass',W/2,H-22);}
+    else if(prop.type==='jail'){ctx.fillStyle='#333';ctx.lineWidth=4;for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(i*80+40,35);ctx.lineTo(i*80+40,360);ctx.stroke();}for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(15,i*60+35);ctx.lineTo(490,i*60+35);ctx.stroke();}ctx.fillStyle='rgba(255,255,255,0.85)';ctx.font='bold 50px Arial';ctx.fillText('JAIL',W/2,45);ctx.fillStyle='rgba(0,0,0,0.7)';ctx.font='24px Arial';ctx.fillText('Just Visiting',W/2,470);}
+    else if(prop.type==='freeparking'){ctx.fillStyle='#F9A825';ctx.fillRect(4,4,W-8,H-8);ctx.strokeStyle='#000';ctx.lineWidth=6;ctx.strokeRect(8,8,W-16,H-16);ctx.fillStyle='#333';ctx.font='bold 70px Arial';ctx.fillText('FREE',W/2,120);ctx.font='bold 70px Arial';ctx.fillText('PARKING',W/2,220);ctx.font='48px Arial';ctx.fillText('Ⓟ',W/2,350);}
+    else if(prop.type==='gotojail'){ctx.fillStyle='#B71C1C';ctx.fillRect(4,4,W-8,H-8);ctx.fillStyle='#fff';ctx.font='bold 60px Arial';ctx.fillText('GO TO',W/2,100);ctx.font='bold 60px Arial';ctx.fillText('JAIL',W/2,200);ctx.font='48px Arial';ctx.fillText('🔒',W/2,320);}
   }else{
-    const nameY=90;ctx.font='bold 22px Arial';let nm=prop.name||'';
-    if(nm.length>14)ctx.font='bold 18px Arial';if(nm.length>18)ctx.font='bold 15px Arial';
+    const nameY=170;ctx.font='bold 42px Arial';let nm=prop.name||'';
+    if(nm.length>14)ctx.font='bold 36px Arial';if(nm.length>18)ctx.font='bold 30px Arial';
     ctx.fillStyle='#000000';ctx.fillText(nm,W/2,nameY);
-    if(prop.price){ctx.font='18px Arial';ctx.fillStyle='#333';ctx.fillText('$'+prop.price,W/2,220);}else if(prop.type==='tax'){ctx.font='18px Arial';ctx.fillStyle='#D32F2F';ctx.fillText('$'+prop.taxAmount,W/2,220);}else if(prop.type==='chance'){ctx.font='28px Arial';ctx.fillText('❓',W/2,180);}else if(prop.type==='community'){ctx.font='28px Arial';ctx.fillText('📦',W/2,180);}
+    if(prop.price){ctx.font='32px Arial';ctx.fillStyle='#333';ctx.fillText('$'+prop.price,W/2,430);}else if(prop.type==='tax'){ctx.font='32px Arial';ctx.fillStyle='#D32F2F';ctx.fillText('$'+prop.taxAmount,W/2,430);}else if(prop.type==='chance'){ctx.font='48px Arial';ctx.fillText('❓',W/2,350);}else if(prop.type==='community'){ctx.font='48px Arial';ctx.fillText('📦',W/2,350);}
   }
-  const tex=new THREE.CanvasTexture(c);tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.generateMipmaps=true;return tex;
+  const tex=new THREE.CanvasTexture(c);tex.magFilter=THREE.LinearFilter;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.generateMipmaps=true;tex.anisotropy=renderer&&renderer.capabilities?renderer.capabilities.getMaxAnisotropy():4;return tex;
 }
 function createWaterCanvasTexture(){waterCanvas=document.createElement('canvas');waterCanvas.width=256;waterCanvas.height=256;waterTexture=new THREE.CanvasTexture(waterCanvas);return waterTexture;}
 function updateWaterTexture(time){
@@ -323,9 +325,10 @@ function init3D(){
   camera=new THREE.PerspectiveCamera(55,window.innerWidth/window.innerHeight,0.1,400);
   camera.position.set(28,32,28);cameraLookTarget={x:0,y:2,z:0};currentLookAt={x:0,y:2,z:0};camera.lookAt(0,2,0);
   renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth,window.innerHeight);renderer.setPixelRatio(Math.min(window.devicePixelRatio,isMobile?1.5:2));
+  renderer.setSize(window.innerWidth,window.innerHeight);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
   renderer.domElement.style.touchAction='none';document.body.prepend(renderer.domElement);
+  rendererReady=true;
   scene.children.filter(c=>c.isLight).forEach(l=>scene.remove(l));
   const sun=new THREE.DirectionalLight(0xFFF5CC,1.4);sun.position.set(25,45,20);sun.castShadow=true;
   sun.shadow.mapSize.width=isMobile?1024:2048;sun.shadow.mapSize.height=isMobile?1024:2048;
@@ -395,7 +398,7 @@ function createCityCenter(){
     {x:-5,z:1.5,w:1,h:3.5,d:.8},{x:-3.5,z:1.5,w:.8,h:4,d:.7},{x:-2,z:1.5,w:.9,h:4.5,d:.8},{x:2,z:1.5,w:.7,h:3.5,d:.7},{x:3.5,z:1.5,w:1.1,h:4,d:.9},{x:5,z:1.5,w:.8,h:3,d:.7},
     {x:-4.5,z:3.5,w:.8,h:3,d:.7},{x:-3,z:3.5,w:.7,h:3.5,d:.7},{x:-1.5,z:3.5,w:1,h:4,d:.8},{x:1.5,z:3.5,w:.8,h:3.5,d:.7},{x:3,z:3.5,w:.9,h:3,d:.8},{x:4.5,z:3.5,w:.7,h:2.5,d:.6},
   ];
-  bl.forEach((b,i)=>{const mat=new THREE.MeshPhongMaterial({map:winTex});const m=new THREE.Mesh(new THREE.BoxGeometry(b.w,b.h,b.d),mat);m.position.set(b.x,cy+0.08+b.h/2,b.z);m.castShadow=true;m.receiveShadow=true;m.userData={phase:Math.random()*Math.PI*2,baseHeight:b.h};cityGroup.add(m);buildings.push(m);
+  bl.forEach((b,i)=>{const col=bCols[i%bCols.length];const mat=new THREE.MeshPhongMaterial({color:col,map:winTex});const m=new THREE.Mesh(new THREE.BoxGeometry(b.w,b.h,b.d),mat);m.position.set(b.x,cy+0.08+b.h/2,b.z);m.castShadow=true;m.receiveShadow=true;m.userData={phase:Math.random()*Math.PI*2,baseHeight:b.h};cityGroup.add(m);buildings.push(m);
     if(i%3===0||i%5===0){const s=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.03,1,6),new THREE.MeshPhongMaterial({color:0x90A4AE}));s.position.set(b.x,cy+0.08+b.h+0.5,b.z);cityGroup.add(s);buildings.push(s);}});
   const tb=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.2,4,8),new THREE.MeshPhongMaterial({color:0x607D8B}));tb.position.set(0,cy+0.08+2,0);tb.castShadow=true;cityGroup.add(tb);buildings.push(tb);
   const td=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.5,0.3,16),new THREE.MeshPhongMaterial({color:0x78909C}));td.position.set(0,cy+0.08+4.15,0);cityGroup.add(td);buildings.push(td);
@@ -511,7 +514,7 @@ function animateToken(token,dt){
   if(ud.bouncing){ud.bounceTime+=dt;if(ud.bounceTime<0.4)token.position.y+=Math.sin(ud.bounceTime/0.4*Math.PI)*0.3*dt*8;else ud.bouncing=false;}
 }
 
-function focusCameraOnPlayer(pidx){const p=S.players[pidx];if(!p)return;const tp=getTokenWorldPosition(p.pos!==undefined?p.pos:p.position);const side=getBoardSide(p.pos!==undefined?p.pos:p.position);let off;if(side==='bottom')off={x:tp.x*0.3,y:22,z:tp.z+24};else if(side==='top')off={x:tp.x*0.3,y:22,z:tp.z-24};else if(side==='left')off={x:tp.x-24,y:22,z:tp.z*0.3};else if(side==='right')off={x:tp.x+24,y:22,z:tp.z*0.3};else off={x:25,y:28,z:25};cameraTarget=off;cameraLookTarget={x:tp.x*0.5,y:tp.y+1.5,z:tp.z*0.5};cameraTransitioning=true;overviewMode=false;}
+function focusCameraOnPlayer(pidx){const p=S.players[pidx];if(!p)return;const posIdx=p.pos!==undefined?p.pos:p.position;const tp=getTokenWorldPosition(posIdx);const side=getBoardSide(posIdx);let off;if(side==='bottom')off={x:tp.x*0.3+2,y:22,z:tp.z+24};else if(side==='top')off={x:tp.x*0.3-2,y:22,z:tp.z-24};else if(side==='left')off={x:tp.x-24,y:22,z:tp.z*0.3+2};else if(side==='right')off={x:tp.x+24,y:22,z:tp.z*0.3-2};else off={x:25,y:28,z:25};cameraTarget=off;cameraLookTarget={x:tp.x*0.5,y:tp.y+1.5,z:tp.z*0.5};cameraTransitioning=true;overviewMode=false;}
 function focusCameraOverview(){cameraTarget={x:28,y:32,z:28};cameraLookTarget={x:0,y:2,z:0};cameraTransitioning=true;overviewMode=true;}
 function updateCamera(dt){if(!cameraTransitioning)return;const sp=2.5;camera.position.x+=(cameraTarget.x-camera.position.x)*sp*dt;camera.position.y+=(cameraTarget.y-camera.position.y)*sp*dt;camera.position.z+=(cameraTarget.z-camera.position.z)*sp*dt;currentLookAt.x+=(cameraLookTarget.x-currentLookAt.x)*sp*dt;currentLookAt.y+=(cameraLookTarget.y-currentLookAt.y)*sp*dt;currentLookAt.z+=(cameraLookTarget.z-currentLookAt.z)*sp*dt;camera.lookAt(currentLookAt.x,currentLookAt.y,currentLookAt.z);if(Math.abs(camera.position.x-cameraTarget.x)+Math.abs(camera.position.z-cameraTarget.z)<0.05)cameraTransitioning=false;}
 
@@ -537,11 +540,11 @@ function handleTileClick(cx,cy){const rect=renderer.domElement.getBoundingClient
 function showPropertyPopup(prop,idx,x,y){
   const old=document.querySelector('.property-popup');if(old)old.remove();
   const owner=S.propertyOwners[idx],ownerName=owner?getP(owner)?.name||'Unknown':'Unowned',houses=S.propertyHouses[idx],mortgaged=S.propertyMortgaged[idx];
-  const popup=document.createElement('div');popup.className='property-popup';const grp=prop.group?COLORS[prop.group]||'#888':'#888';const cbar=prop.group?'<div style="height:4px;background:'+grp+';border-radius:2px;margin-bottom:6px;"></div>':'';
+  const popup=document.createElement('div');popup.className='property-popup';const grp=prop.group?COLORS[prop.group]||'#888':'#888';const cbar=prop.group?'<div style=\"height:4px;background:'+grp+';border-radius:2px;margin-bottom:6px;\"></div>':'';
   let extra='';
-  if(prop.type==='property'||prop.type==='railroad'||prop.type==='utility'){extra+='<div class="pp-price">$'+(prop.price||0)+'</div>';if(owner===S.playerId&&prop.type==='property')extra+='<div class="pp-owner">You own this - '+(houses>=5?'🏨 Hotel':'🏠 '+houses+' houses')+'</div>';if(mortgaged)extra+='<div class="pp-owner" style="color:#ff6b6b;">🏦 Mortgaged</div>';if(owner&&owner!==S.playerId)extra+='<div class="pp-owner">Owned by: '+ownerName+'</div>';}
-  else if(prop.type==='chance')extra='<div class="pp-owner">❓ Draw a card!</div>';else if(prop.type==='community')extra='<div class="pp-owner">📦 Draw a card!</div>';else if(prop.type==='tax')extra='<div class="pp-price">Pay $'+(prop.taxAmount||0)+'</div>';
-  popup.innerHTML=cbar+'<div class="pp-name">'+prop.name+'</div>'+extra;
+  if(prop.type==='property'||prop.type==='railroad'||prop.type==='utility'){extra+='<div class=\"pp-price\">$'+(prop.price||0)+'</div>';if(owner===S.playerId&&prop.type==='property')extra+='<div class=\"pp-owner\">You own this - '+(houses>=5?'🏨 Hotel':'🏠 '+houses+' houses')+'</div>';if(mortgaged)extra+='<div class=\"pp-owner\" style=\"color:#ff6b6b;\">🏦 Mortgaged</div>';if(owner&&owner!==S.playerId)extra+='<div class=\"pp-owner\">Owned by: '+ownerName+'</div>';}
+  else if(prop.type==='chance')extra='<div class=\"pp-owner\">❓ Draw a card!</div>';else if(prop.type==='community')extra='<div class=\"pp-owner\">📦 Draw a card!</div>';else if(prop.type==='tax')extra='<div class=\"pp-price\">Pay $'+(prop.taxAmount||0)+'</div>';
+  popup.innerHTML=cbar+'<div class=\"pp-name\">'+prop.name+'</div>'+extra;
   let px=Math.min(x,window.innerWidth-180-10),py=Math.min(y-10,window.innerHeight-80);px=Math.max(10,px);py=Math.max(50,py);popup.style.left=px+'px';popup.style.top=py+'px';document.body.appendChild(popup);setTimeout(()=>{const p=document.querySelector('.property-popup');if(p)p.remove();},3000);
 }
 
@@ -627,7 +630,8 @@ function syncTokenPositions(){
 
 function moveTokenAnimated(player,toSpaceIdx,onDone){
   const token=playerTokens[player.id];if(!token||!boardPositions[toSpaceIdx]){player.position=toSpaceIdx;syncTokenPositions();if(onDone)onDone();return;}
-  const oldPos=player.position,steps=[];if(toSpaceIdx>oldPos){for(let i=oldPos+1;i<=toSpaceIdx;i++)steps.push(i);}else if(toSpaceIdx<oldPos){for(let i=oldPos+1;i<40;i++)steps.push(i);for(let i=0;i<=toSpaceIdx;i++)steps.push(i);}
+  const oldPos=player.position,steps=[];
+  if(toSpaceIdx>oldPos){for(let i=oldPos+1;i<=toSpaceIdx;i++)steps.push(i);}else if(toSpaceIdx<oldPos){for(let i=oldPos+1;i<40;i++)steps.push(i);for(let i=0;i<=toSpaceIdx;i++)steps.push(i);}
   if(steps.length===0){player.position=toSpaceIdx;syncTokenPositions();if(onDone)onDone();return;}
   let stepIdx=0;const walkNext=()=>{if(stepIdx>=steps.length){player.position=toSpaceIdx;syncTokenPositions();const arr=getTokenWorldPosition(toSpaceIdx);cameraLookTarget={x:arr.x*0.4,y:arr.y+1,z:arr.z*0.4};if(onDone)onDone();return;}
     const np=boardPositions[steps[stepIdx]];if(!np){stepIdx++;walkNext();return;}
@@ -639,14 +643,17 @@ function moveTokenAnimated(player,toSpaceIdx,onDone){
 
 function rollDiceGame(){
   if(!isMyTurn()||S.gameOver||S.modalOpen||diceAnimating)return;
-  const d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1;S.diceValue=[d1,d2];S.rolled=true;
+  const d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1;S.diceValue=[d1,d2];S.rolled=true;S._rolledThisTurn=true;
   const isDoubles=d1===d2,cp=getCP();if(!cp)return;
   if(isDoubles)S.doublesCount++;else S.doublesCount=0;
   addLogEntry(cp.name+' rolled '+d1+' + '+d2+(isDoubles?' (DOUBLES!)':''));
   rollDice3D(d1,d2,()=>{
     if(S.doublesCount>=3){toast(cp.name+' rolled 3 doubles! Go to Jail!');goToJail(cp);S.doublesCount=0;endTurn();broadcastGameAction('roll',{d1,d2,isDoubles,gotoJail:true});createParticles(boardPositions[10]||{x:0,y:0.5,z:0},0,15,1,1);return;}
     if(cp.inJail){handleJailRoll(cp,isDoubles,d1+d2);broadcastGameAction('roll',{d1,d2,isDoubles,jailStay:true});return;}
-    movePlayerGame(cp,d1+d2,()=>{if(isDoubles){toast('🎯 Doubles! Roll again!');createParticles({x:0,y:1,z:0},0xFF6F00,20,0.8,1.5);S.rolled=false;updateUI();}broadcastGameAction('roll',{d1,d2,isDoubles});});
+    movePlayerGame(cp,d1+d2,()=>{
+      if(isDoubles){toast('🎯 Doubles! Roll again!');createParticles({x:0,y:1,z:0},0xFF6F00,20,0.8,1.5);S.rolled=false;S._rolledThisTurn=true;updateUI();}
+      broadcastGameAction('roll',{d1,d2,isDoubles,rolledThisTurn:S._rolledThisTurn});
+    });
   });updateUI();
 }
 
@@ -710,10 +717,10 @@ function handleBankruptcy(p){p.bankrupt=true;toast('💀 '+p.name+' bankrupt!','
 function endGame(w){S.gameOver=true;document.getElementById('winnerName').textContent=w.name+' wins! 🎉';const total=w.money+w.properties.reduce((t,pi)=>t+(PROPERTIES[pi].mortgage||0),0);document.getElementById('winnerStats').textContent='Final cash: $'+w.money+' | Total assets: $'+total;document.getElementById('winScreen').classList.remove('hidden');broadcastGameAction('game_over',{winnerId:w.id});createConfetti({x:0,y:2,z:0},200);}
 function canBuild(p){return p&&p.properties.some(pi=>{const pr=PROPERTIES[pi];return pr.group&&pr.type==='property'&&ownsFull(p.id,pr.group)&&S.propertyHouses[pi]<5;});}
 
-function showBuildModal(){const p=getCP();if(!p||!canBuild(p))return;const groups={};p.properties.forEach(pi=>{const pr=PROPERTIES[pi];if(pr.group&&pr.type==='property'&&ownsFull(p.id,pr.group)){if(!groups[pr.group])groups[pr.group]=[];groups[pr.group].push(pr);}});const content=Object.entries(groups).map(([g,props])=>'<div style="margin-bottom:12px;"><div style="font-size:.85rem;font-weight:600;color:#bbb;display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="width:12px;height:12px;border-radius:3px;background:'+(COLORS[g]||'#ccc')+';display:inline-block;"></span>'+g+' ($'+(PROPERTIES[props[0]?.idx]?.buildCost||50)+'/house)</div>'+props.map(pr=>{const h=S.propertyHouses[pr.idx],m=h>=5,c=pr.buildCost;return'<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:4px;"><span style="font-size:.8rem;">'+pr.name+'</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.8rem;">'+'🏠'.repeat(Math.min(h,4))+(h===5?'🏨':'')+'</span>'+(m?'<span style="font-size:.75rem;color:#4caf50;">MAX</span>':'<button class="btn btn-sm btn-success" onclick="doBuild('+pr.idx+')" '+(p.money<c?'disabled style="opacity:.5;"':'')+'>Build $'+c+'</button>')+'</div></div>';}).join('')+'</div>').join('')||'<p style="color:#888;">No properties eligible.</p>';showModal('🏗️ Build Houses',content);}
+function showBuildModal(){const p=getCP();if(!p||!canBuild(p))return;const groups={};p.properties.forEach(pi=>{const pr=PROPERTIES[pi];if(pr.group&&pr.type==='property'&&ownsFull(p.id,pr.group)){if(!groups[pr.group])groups[pr.group]=[];groups[pr.group].push(pr);}});const content=Object.entries(groups).map(([g,props])=>'<div style=\"margin-bottom:12px;\"><div style=\"font-size:.85rem;font-weight:600;color:#bbb;display:flex;align-items:center;gap:6px;margin-bottom:6px;\"><span style=\"width:12px;height:12px;border-radius:3px;background:'+(COLORS[g]||'#ccc')+';display:inline-block;\"></span>'+g+' ($'+(PROPERTIES[props[0]?.idx]?.buildCost||50)+'/house)</div>'+props.map(pr=>{const h=S.propertyHouses[pr.idx],m=h>=5,c=pr.buildCost;return'<div style=\"display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:4px;\"><span style=\"font-size:.8rem;\">'+pr.name+'</span><div style=\"display:flex;align-items:center;gap:8px;\"><span style=\"font-size:.8rem;\">'+'🏠'.repeat(Math.min(h,4))+(h===5?'🏨':'')+'</span>'+(m?'<span style=\"font-size:.75rem;color:#4caf50;\">MAX</span>':'<button class=\"btn btn-sm btn-success\" onclick=\"doBuild('+pr.idx+')\" '+(p.money<c?'disabled style=\"opacity:.5;\"':'')+'>Build $'+c+'</button>')+'</div></div>';}).join('')+'</div>').join('')||'<p style=\"color:#888;\">No properties eligible.</p>';showModal('🏗️ Build Houses',content);}
 function doBuild(pi){const p=getCP();if(!p)return;const pr=PROPERTIES[pi];if(!pr||p.money<pr.buildCost||S.propertyHouses[pi]>=5)return;p.money-=pr.buildCost;S.propertyHouses[pi]++;toast('🏠 Built on '+pr.name+'!');closeModal();updateUI();renderPlayerPanels();addLogEntry(p.name+' built on '+pr.name);addHouseModel(pi);broadcastGameAction('build',{propertyIdx:pi});}
 window.doBuild=doBuild;
-function showMortgageModal(){const p=getCP();if(!p)return;const content=p.properties.map(pi=>{const pr=PROPERTIES[pi],m=S.propertyMortgaged[pi];if(S.propertyHouses[pi]>0)return'';const uc=Math.ceil(pr.mortgage*1.1);return'<div class="info-row"><span class="label">'+pr.name+'</span>'+(m?'<button class="btn btn-sm btn-secondary" onclick="doUnmortgage3D('+pi+')" '+(p.money<uc?'disabled':'')+'>Unmortgage $'+uc+'</button>':'<button class="btn btn-sm btn-secondary" onclick="doMortgage3D('+pi+')">Mortgage $'+pr.mortgage+'</button>')+'</div>';}).filter(Boolean).join('')||'<p style="color:#888;text-align:center;">No properties available.</p>';showModal('🏦 Mortgage / Unmortgage',content);}
+function showMortgageModal(){const p=getCP();if(!p)return;const content=p.properties.map(pi=>{const pr=PROPERTIES[pi],m=S.propertyMortgaged[pi];if(S.propertyHouses[pi]>0)return'';const uc=Math.ceil(pr.mortgage*1.1);return'<div class=\"info-row\"><span class=\"label\">'+pr.name+'</span>'+(m?'<button class=\"btn btn-sm btn-secondary\" onclick=\"doUnmortgage3D('+pi+')\" '+(p.money<uc?'disabled':'')+'>Unmortgage $'+uc+'</button>':'<button class=\"btn btn-sm btn-secondary\" onclick=\"doMortgage3D('+pi+')\">Mortgage $'+pr.mortgage+'</button>')+'</div>';}).filter(Boolean).join('')||'<p style=\"color:#888;text-align:center;\">No properties available.</p>';showModal('🏦 Mortgage / Unmortgage',content);}
 function doMortgage3D(pi){const p=getCP();if(!p||S.propertyHouses[pi]>0)return;S.propertyMortgaged[pi]=true;p.money+=PROPERTIES[pi].mortgage;toast('🏦 Mortgaged!');closeModal();updateUI();renderPlayerPanels();broadcastGameAction('mortgage',{propertyIdx:pi});}
 function doUnmortgage3D(pi){const p=getCP();if(!p)return;const c=Math.ceil(PROPERTIES[pi].mortgage*1.1);if(p.money<c)return;p.money-=c;S.propertyMortgaged[pi]=false;toast('✅ Unmortgaged!');closeModal();updateUI();renderPlayerPanels();broadcastGameAction('unmortgage',{propertyIdx:pi});}
 window.doMortgage3D=doMortgage3D;window.doUnmortgage3D=doUnmortgage3D;
@@ -735,12 +742,12 @@ function handleMsg(msg){
   }
 }
 
-function updatePlayerList(players){const list=document.getElementById('playerList');if(!list||!players)return;list.innerHTML=players.map(p=>'<div class="player-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.06);border-radius:8px;font-size:.9rem;"><span style="width:8px;height:8px;border-radius:50%;background:'+(p.connected?'#4caf50':'#f44336')+';"></span><span>'+(p.name||'Player')+'</span>'+(p.id===S.playerId?'<span style="font-size:.65rem;color:#888;font-style:italic;">(you)</span>':'')+(p.id===S.hostId?'<span style="font-size:.6rem;background:#ffd700;color:#1a1a2e;padding:1px 6px;border-radius:3px;font-weight:600;">HOST</span>':'')+'</div>').join('');}
+function updatePlayerList(players){const list=document.getElementById('playerList');if(!list||!players)return;list.innerHTML=players.map(p=>'<div class=\"player-item\" style=\"display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.06);border-radius:8px;font-size:.9rem;\"><span style=\"width:8px;height:8px;border-radius:50%;background:'+(p.connected?'#4caf50':'#f44336')+';\"></span><span>'+(p.name||'Player')+'</span>'+(p.id===S.playerId?'<span style=\"font-size:.65rem;color:#888;font-style:italic;\">(you)</span>':'')+(p.id===S.hostId?'<span style=\"font-size:.6rem;background:#ffd700;color:#1a1a2e;padding:1px 6px;border-radius:3px;font-weight:600;\">HOST</span>':'')+'</div>').join('');}
 
-function startGameFromServer(gameState){Object.assign(S,gameState||{});S.gameStarted=true;document.getElementById('lobbyScreen').classList.add('hidden');document.getElementById('roomScreen').classList.add('hidden');document.getElementById('gameContainer').classList.remove('hidden');createPlayerTokens();updateUI();renderPlayerPanels();updateActivePlayerHUD();addLogEntry('Game started!');const cp=getCP();if(cp&&isMyTurn())toast('🎯 Your turn! Roll the dice!');setTimeout(focusCameraOverview,300);}
+function startGameFromServer(gameState){Object.assign(S,gameState||{});S.gameStarted=true;S.rolled=S.rolled||false;document.getElementById('lobbyScreen').classList.add('hidden');document.getElementById('roomScreen').classList.add('hidden');document.getElementById('gameContainer').classList.remove('hidden');createPlayerTokens();updateUI();renderPlayerPanels();updateActivePlayerHUD();addLogEntry('Game started!');const cp=getCP();if(cp&&isMyTurn())toast('🎯 Your turn! Roll the dice!');setTimeout(focusCameraOverview,300);}
 function broadcastGameAction(action,actionData){send({type:'game_action',playerId:S.playerId,action,actionData:actionData||{},gameState:createSnapshot()});}
-function createSnapshot(){return{players:S.players.map(p=>({...p})),propertyOwners:[...S.propertyOwners],propertyHouses:[...S.propertyHouses],propertyMortgaged:[...S.propertyMortgaged],chanceDeck:[...S.chanceDeck],communityDeck:[...S.communityDeck],jailTurns:{...S.jailTurns},jailFreeCards:{...S.jailFreeCards},currentPlayerIndex:S.currentPlayerIndex,doublesCount:S.doublesCount};}
-function applyRemoteAction(msg){if(msg.gameState){S.players=msg.gameState.players;S.propertyOwners=msg.gameState.propertyOwners;S.propertyHouses=msg.gameState.propertyHouses;S.propertyMortgaged=msg.gameState.propertyMortgaged;S.chanceDeck=msg.gameState.chanceDeck;S.communityDeck=msg.gameState.communityDeck;S.jailTurns=msg.gameState.jailTurns;S.jailFreeCards=msg.gameState.jailFreeCards;S.currentPlayerIndex=msg.gameState.currentPlayerIndex;S.doublesCount=msg.gameState.doublesCount;}syncTokenPositions();updateUI();renderPlayerPanels();}
+function createSnapshot(){return{players:S.players.map(p=>({...p})),propertyOwners:[...S.propertyOwners],propertyHouses:[...S.propertyHouses],propertyMortgaged:[...S.propertyMortgaged],chanceDeck:[...S.chanceDeck],communityDeck:[...S.communityDeck],jailTurns:{...S.jailTurns},jailFreeCards:{...S.jailFreeCards},currentPlayerIndex:S.currentPlayerIndex,doublesCount:S.doublesCount,rolled:S.rolled,_rolledThisTurn:S._rolledThisTurn||false};}
+function applyRemoteAction(msg){if(msg.gameState){S.players=msg.gameState.players;S.propertyOwners=msg.gameState.propertyOwners;S.propertyHouses=msg.gameState.propertyHouses;S.propertyMortgaged=msg.gameState.propertyMortgaged;S.chanceDeck=msg.gameState.chanceDeck;S.communityDeck=msg.gameState.communityDeck;S.jailTurns=msg.gameState.jailTurns;S.jailFreeCards=msg.gameState.jailFreeCards;S.currentPlayerIndex=msg.gameState.currentPlayerIndex;S.doublesCount=msg.gameState.doublesCount;S.rolled=msg.gameState.rolled||false;S._rolledThisTurn=msg.gameState._rolledThisTurn||false;}syncTokenPositions();updateUI();renderPlayerPanels();}
 function handleActionUI(msg){switch(msg.action){case'buy':case'mortgage':case'unmortgage':case'build':case'card':case'roll':case'end_turn':case'bankruptcy':if(msg.actionData&&msg.actionData.propertyIdx!==undefined)addHouseModel(msg.actionData.propertyIdx);break;case'auction_start':if(msg.actionData&&msg.actionData.propertyIdx!==undefined){const sp=PROPERTIES[msg.actionData.propertyIdx];if(sp&&!S._auction){S._auction={property:sp,highestBid:0,highestBidder:null,bidders:[...S.players.filter(p=>!p.bankrupt)],currentBidderIdx:0,currentBidder:(S.players.filter(p=>!p.bankrupt)[0]||{}).id};showAuctionModal(sp);closeModal();}}break;case'auction_bid':if(msg.actionData&&S._auction){const a=S._auction;if(a.property&&a.property.idx===msg.actionData.propertyIdx&&msg.actionData.amount>a.highestBid){a.highestBid=msg.actionData.amount;a.highestBidder=msg.actionData.bidderId;a.currentBidderIdx=(a.currentBidderIdx+1)%a.bidders.length;a.currentBidder=a.bidders[a.currentBidderIdx]?.id;renderAuctionModal(a.property);}}break;case'auction_pass':if(msg.actionData&&S._auction){const a=S._auction;if(a.property&&a.property.idx===msg.actionData.propertyIdx&&msg.actionData.bidderId){const bidderIdx=a.bidders.findIndex(b=>b.id===msg.actionData.bidderId);if(bidderIdx>=0){a.bidders.splice(bidderIdx,1);if(a.highestBidder===msg.actionData.bidderId||a.highestBidder===null){a.highestBidder=null;a.highestBid=0;}if(a.bidders.length<=1){if(a.highestBidder){const w=getP(a.highestBidder);if(w){w.money-=a.highestBid;S.propertyOwners[a.property.idx]=w.id;w.properties.push(a.property.idx);toast('🔨 '+w.name+' won auction!');}}closeModal();S._auction=null;updateUI();renderPlayerPanels();}else{renderAuctionModal(a.property);}}}}break;case'auction_end':closeModal();S._auction=null;updateUI();renderPlayerPanels();break;}}
 
 function showScreen(s){document.getElementById('lobbyScreen').classList.toggle('hidden',s!=='lobby');document.getElementById('roomScreen').classList.toggle('hidden',s!=='room');}
@@ -756,7 +763,7 @@ function showModal(title,content){closeModal();const c=document.getElementById('
 function closeModal(){document.getElementById('modalContainer').innerHTML='';document.getElementById('modalContainer').classList.add('hidden');S.modalOpen=false;S._auction=null;updateUI();}
 window.closeModal=closeModal;
 
-function showBuyModal(space){const p=getCP();if(!p)return;showModal('🏠 Property','<p style="text-align:center;font-size:1.2rem;font-weight:700;margin-bottom:4px;">'+space.name+'</p><p style="text-align:center;font-size:1.5rem;font-weight:800;color:#ffd700;margin-bottom:8px;">$'+space.price+'</p><div class="info-row"><span class="label">Your Balance</span><span class="value" style="color:'+(p.money>=space.price?'#4caf50':'#ff6b6b')+';">$'+p.money+'</span></div><div class="info-row"><span class="label">Rent</span><span class="value">$'+(space.rent||0)+'</span></div><div class="actions"><button id="buyBtn" class="btn btn-primary" '+(p.money>=space.price?'':'disabled')+'>Buy</button><button class="btn btn-secondary" onclick="startAuction(PROPERTIES['+space.idx+'])">Auction</button><button class="btn btn-secondary" onclick="closeModal();endTurn();">Skip</button></div>');const buyIdx=space.idx;document.getElementById('buyBtn').addEventListener('click',function(){const cp=getCP();const s=PROPERTIES[buyIdx];if(!cp||!s)return;if(cp.money<s.price){toast('Not enough!','error');startAuction(s);return;}cp.money-=s.price;S.propertyOwners[s.idx]=cp.id;cp.properties.push(s.idx);toast('🏠 Bought '+s.name+'!');closeModal();updateUI();renderPlayerPanels();const pos=boardPositions[s.idx];if(pos)createParticles({x:pos.x,y:0.5,z:pos.z},0xFFD700,25,1.5,1);addLogEntry(cp.name+' bought '+s.name+' for $'+s.price);broadcastGameAction('buy',{propertyIdx:s.idx});});}
+function showBuyModal(space){const p=getCP();if(!p)return;showModal('🏠 Property','<p style="text-align:center;font-size:1.2rem;font-weight:700;margin-bottom:4px;">'+space.name+'</p><p style="text-align:center;font-size:1.5rem;font-weight:800;color:#ffd700;margin-bottom:8px;">$'+space.price+'</p><div class="info-row"><span class="label">Your Balance</span><span class="value" style="color:'+(p.money>=space.price?'#4caf50':'#ff6b6b')+';">$'+p.money+'</span></div><div class="info-row"><span class="label">Rent</span><span class="value">$'+(space.rent||0)+'</span></div><div class="actions"><button id="buyBtn" class="btn btn-primary" '+(p.money>=space.price?'':'disabled')+'>Buy</button><button class="btn btn-secondary" onclick="startAuction(PROPERTIES['+space.idx+'])">Auction</button><button class="btn btn-secondary" onclick="closeModal();if(S.doublesCount===0)endTurn()">Skip</button></div>');const buyIdx=space.idx;document.getElementById('buyBtn').addEventListener('click',function(){const cp=getCP();const s=PROPERTIES[buyIdx];if(!cp||!s)return;if(cp.money<s.price){toast('Not enough!','error');startAuction(s);return;}cp.money-=s.price;S.propertyOwners[s.idx]=cp.id;cp.properties.push(s.idx);toast('🏠 Bought '+s.name+'!');closeModal();updateUI();renderPlayerPanels();const pos=boardPositions[s.idx];if(pos)createParticles({x:pos.x,y:0.5,z:pos.z},0xFFD700,25,1.5,1);addLogEntry(cp.name+' bought '+s.name+' for $'+s.price);broadcastGameAction('buy',{propertyIdx:s.idx});});}
 
 function showCardModal(card,type,player){const icon=type==='chance'?'❓':'📦';const title=type==='chance'?'CHANCE':'COMMUNITY CHEST';showModal(title,'<div class="card-animation" style="text-align:center;padding:8px;"><div style="font-size:3rem;margin-bottom:8px;">'+icon+'</div><p style="font-size:1.05rem;font-weight:500;line-height:1.6;">'+card.text+'</p><div class="actions" style="justify-content:center;margin-top:16px;"><button class="btn btn-primary" onclick="executeCard(S._lastCard, S._lastCardPlayerId)">OK</button></div></div>');S._lastCard=card;S._lastCardPlayerId=player.id;}
 window.executeCard=executeCard;
@@ -774,12 +781,13 @@ async function init(){
   document.getElementById('startBtn').addEventListener('click',()=>{if(!S.isHost)return;initGame();send({type:'start_game',gameState:createSnapshot()});S.gameStarted=true;document.getElementById('lobbyScreen').classList.add('hidden');document.getElementById('roomScreen').classList.add('hidden');document.getElementById('gameContainer').classList.remove('hidden');updateUI();renderPlayerPanels();addLogEntry('Game started!');});
   document.getElementById('leaveBtn').addEventListener('click',()=>{send({type:'leave_room'});if(S.ws)S.ws.close();S.roomCode=null;showScreen('lobby');});
   document.getElementById('rollBtn').addEventListener('click',rollDiceGame);document.getElementById('endTurnBtn').addEventListener('click',endTurn);document.getElementById('buildBtn').addEventListener('click',showBuildModal);document.getElementById('mortgageBtn').addEventListener('click',showMortgageModal);document.getElementById('bankruptcyBtn').addEventListener('click',()=>{const cp=getCP();if(cp)handleBankruptcy(cp);});document.getElementById('overviewBtn').addEventListener('click',focusCameraOverview);
-  document.getElementById('playAgainBtn').addEventListener('click',()=>{document.getElementById('winScreen').classList.add('hidden');document.getElementById('gameContainer').classList.add('hidden');document.getElementById('lobbyScreen').classList.remove('hidden');S.gameStarted=false;});
+  document.getElementById('playAgainBtn').addEventListener('click',()=>{document.getElementById('winScreen').classList.add('hidden');document.getElementById('lobbyScreen').classList.remove('hidden');document.getElementById('roomScreen').classList.add('hidden');S.gameStarted=false;});
   document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('createBtn').click();});document.getElementById('codeInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('joinBtn').click();});
 }
 document.addEventListener('DOMContentLoaded',init);
 </script>
 
+<div id="gameContainer" style="position:fixed;inset:0;z-index:1">
 <div id="lobbyScreen" class="screen" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b1a 0%,#1a5c2a 50%,#0d3b1a 100%);z-index:50">
   <div style="text-align:center;">
     <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2rem,8vw,3rem);background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;">MONOPOLY</h1>
@@ -800,20 +808,15 @@ document.addEventListener('DOMContentLoaded',init);
 
 <div id="roomScreen" class="screen hidden" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b1a 0%,#1a5c2a 50%,#0d3b1a 100%);z-index:50">
   <div style="text-align:center;width:min(92vw,340px);">
-    <div style="background:rgba(255,255,255,.05);border:2px dashed rgba(255,215,0,.3);border-radius:12px;padding:clamp(10px,3vw,16px);margin-bottom:clamp(10px,3vw,16px);"><div style="font-size:clamp(.65rem,2vw,.75rem);color:#888;">Share this code with friends</div><div id="roomCode" style="font-size:clamp(1.8rem,6vw,2.5rem);font-weight:800;letter-spacing:clamp(4px,2vw,8px);color:#ffd700;font-family:'Playfair Display',serif;">------</div></div>
-    <h3 style="font-size:clamp(.85rem,2.5vw,1rem);font-weight:600;margin-bottom:clamp(6px,2vw,10px);">Players in Room</h3>
-    <div id="playerList" style="display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:12px;"></div>
-    <button id="startBtn" class="btn btn-primary" style="width:100%;">🎮 Start Game</button>
-    <button id="leaveBtn" class="btn btn-danger" style="width:100%;margin-top:6px;">Leave Room</button>
+    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:clamp(16px,4vw,24px);">
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:#ffd700;margin-bottom:4px;">Waiting Room</h2>
+      <p style="color:#888;font-size:.85rem;margin-bottom:12px;">Room: <strong id="roomCode" style="color:#ffd700;letter-spacing:3px;font-size:1.2rem;">---</strong></p>
+      <div id="playerList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;"><button id="startBtn" class="btn btn-primary" style="flex:2;">🚀 Start Game</button><button id="leaveBtn" class="btn btn-secondary" style="flex:1;">Leave</button></div>
+    </div>
   </div>
 </div>
+</div>
 
-<div id="gameContainer" class="hidden" style="position:fixed;inset:0;z-index:5;"></div>
-
-<style>
-.token-option.selected{border-color:#ffd700!important;background:rgba(255,215,0,.15)!important;transform:scale(1.05);}
-.token-option:hover{background:rgba(255,255,255,.12)!important;}
-#gameContainer.hidden{display:none}
-</style>
 </body>
 </html>
